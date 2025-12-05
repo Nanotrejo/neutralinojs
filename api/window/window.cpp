@@ -1052,12 +1052,12 @@ void setSkipTaskbar(bool skip) {
 }
 
 void setZoom(double zoomFactor) {
-    // Validate zoom factor range to match schema constraints
-    if(zoomFactor <= 0.0) {
-        zoomFactor = 1.0;
+    // Validate zoom factor range to match schema constraints (0.1 - 5.0)
+    if(zoomFactor < 0.1) {
+        zoomFactor = 0.1;  // Match schema minimum
     }
     if(zoomFactor > 5.0) {
-        zoomFactor = 5.0;
+        zoomFactor = 5.0;  // Match schema maximum
     }
     windowProps.zoom = zoomFactor;
     
