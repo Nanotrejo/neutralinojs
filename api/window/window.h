@@ -125,7 +125,7 @@ bool snapshot(const string &filename);
 void setMainMenu(const json &menu);
 bool init(const json &windowOptions);
 void setZoom(double zoomFactor);
-double getZoom();
+double getZoom();  // Gets current zoom level and updates windowProps.zoom cache
 
 void _close(int exitCode);
 
