@@ -248,6 +248,7 @@ void __saveWindowProps() {
     options["x"] = pos.first;
     options["y"] = pos.second;
     options["maximize"] = window::isMaximized();
+    options["zoom"] = window::getZoom();
     
     #if defined(_WIN32)
     if(IsZoomed(windowHandle)) {
@@ -278,6 +279,10 @@ bool __loadSavedWindowProps() {
         windowProps.maximize = options["maximize"].get<bool>();
         windowProps.sizeOptions.width = options["width"].get<int>();
         windowProps.sizeOptions.height = options["height"].get<int>();
+        
+        if(helpers::hasField(options, "zoom")) {
+            windowProps.zoom = options["zoom"].get<double>();
+        }
 
         #if defined(_WIN32)
         WINDOWPLACEMENT wp = {sizeof(WINDOWPLACEMENT)};
@@ -651,6 +656,9 @@ bool __createWindow() {
 
     if(windowProps.skipTaskbar)
         window::setSkipTaskbar(true);
+    
+    if(windowProps.zoom != 1.0)
+        window::setZoom(windowProps.zoom);
 
     nativeWindow->navigate(windowProps.url);
 
@@ -1043,6 +1051,78 @@ void setSkipTaskbar(bool skip) {
     #endif
 }
 
+void setZoom(double zoomFactor) {
+    if(zoomFactor <= 0.0) {
+        zoomFactor = 1.0;
+    }
+    windowProps.zoom = zoomFactor;
+    
+    #if defined(__linux__) || defined(__FreeBSD__)
+    // Use webkit_web_view_set_zoom_level for GTK/WebKit
+    nativeWindow->dispatch([zoomFactor]() {
+        // Load the webkit function dynamically
+        void *dlib = nativeWindow->dl();
+        if(dlib) {
+            typedef void (*webkit_web_view_set_zoom_level_func)(void*, double);
+            webkit_web_view_set_zoom_level_func webkit_web_view_set_zoom_level = 
+                (webkit_web_view_set_zoom_level_func)(dlsym(dlib, "webkit_web_view_set_zoom_level"));
+            if(webkit_web_view_set_zoom_level) {
+                webkit_web_view_set_zoom_level(nativeWindow->wv(), zoomFactor);
+            }
+        }
+    });
+    
+    #elif defined(__APPLE__)
+    // Use WKWebView's setMagnification for macOS
+    ((void (*)(id, SEL, double))objc_msgSend)(
+        (id)nativeWindow->wv(),
+        "setMagnification:"_sel,
+        zoomFactor
+    );
+    
+    #elif defined(_WIN32)
+    // Use WebView2's ZoomFactor for Windows
+    ICoreWebView2Controller *controller = (ICoreWebView2Controller*)nativeWindow->wv();
+    if(controller) {
+        controller->put_ZoomFactor(zoomFactor);
+    }
+    #endif
+}
+
+double getZoom() {
+    double zoomFactor = 1.0;
+    
+    #if defined(__linux__) || defined(__FreeBSD__)
+    // Get zoom level from WebKitWebView
+    void *dlib = nativeWindow->dl();
+    if(dlib) {
+        typedef double (*webkit_web_view_get_zoom_level_func)(void*);
+        webkit_web_view_get_zoom_level_func webkit_web_view_get_zoom_level = 
+            (webkit_web_view_get_zoom_level_func)(dlsym(dlib, "webkit_web_view_get_zoom_level"));
+        if(webkit_web_view_get_zoom_level) {
+            zoomFactor = webkit_web_view_get_zoom_level(nativeWindow->wv());
+        }
+    }
+    
+    #elif defined(__APPLE__)
+    // Get magnification from WKWebView
+    zoomFactor = ((double (*)(id, SEL))objc_msgSend)(
+        (id)nativeWindow->wv(),
+        "magnification"_sel
+    );
+    
+    #elif defined(_WIN32)
+    // Get zoom factor from WebView2
+    ICoreWebView2Controller *controller = (ICoreWebView2Controller*)nativeWindow->wv();
+    if(controller) {
+        controller->get_ZoomFactor(&zoomFactor);
+    }
+    #endif
+    
+    windowProps.zoom = zoomFactor;
+    return zoomFactor;
+}
+
 bool snapshot(const string &filename) {
     #if defined(__linux__) || defined(__FreeBSD__)
     int width, height, x, y;
@@ -1241,6 +1321,9 @@ bool init(const json &windowOptions) {
 
     if(helpers::hasField(windowOptions, "skipTaskbar"))
         windowProps.skipTaskbar = windowOptions["skipTaskbar"].get<bool>();
+    
+    if(helpers::hasField(windowOptions, "zoom"))
+        windowProps.zoom = windowOptions["zoom"].get<double>();
 
     if(!__createWindow()) {
         return false;
@@ -1552,6 +1635,23 @@ json print(const json &input) {
     return output;
 }
 
+json setZoom(const json &input) {
+    json output;
+    double zoomFactor = 1.0;
+    if(helpers::hasField(input, "zoom")) {
+        zoomFactor = input["zoom"].get<double>();
+    }
+    window::setZoom(zoomFactor);
+    output["success"] = true;
+    return output;
+}
+
+json getZoom(const json &input) {
+    json output;
+    output["returnValue"] = window::getZoom();
+    output["success"] = true;
+    return output;
+}
 
 } // namespace controllers
 
