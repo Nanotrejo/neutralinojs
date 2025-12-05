@@ -1060,65 +1060,17 @@ void setZoom(double zoomFactor) {
     #if defined(__linux__) || defined(__FreeBSD__)
     // Use webkit_web_view_set_zoom_level for GTK/WebKit
     nativeWindow->dispatch([zoomFactor]() {
-        // Load the webkit function dynamically
-        void *dlib = nativeWindow->dl();
-        if(dlib) {
-            typedef void (*webkit_web_view_set_zoom_level_func)(void*, double);
-            webkit_web_view_set_zoom_level_func webkit_web_view_set_zoom_level = 
-                (webkit_web_view_set_zoom_level_func)(dlsym(dlib, "webkit_web_view_set_zoom_level"));
-            if(webkit_web_view_set_zoom_level) {
-                webkit_web_view_set_zoom_level(nativeWindow->wv(), zoomFactor);
-            }
-        }
+        nativeWindow->set_zoom(zoomFactor);
     });
     
-    #elif defined(__APPLE__)
-    // Use WKWebView's setMagnification for macOS
-    ((void (*)(id, SEL, double))objc_msgSend)(
-        (id)nativeWindow->wv(),
-        "setMagnification:"_sel,
-        zoomFactor
-    );
-    
-    #elif defined(_WIN32)
-    // Use WebView2's ZoomFactor for Windows
-    ICoreWebView2Controller *controller = (ICoreWebView2Controller*)nativeWindow->wv();
-    if(controller) {
-        controller->put_ZoomFactor(zoomFactor);
-    }
+    #else
+    // For macOS and Windows, can call directly
+    nativeWindow->set_zoom(zoomFactor);
     #endif
 }
 
 double getZoom() {
-    double zoomFactor = 1.0;
-    
-    #if defined(__linux__) || defined(__FreeBSD__)
-    // Get zoom level from WebKitWebView
-    void *dlib = nativeWindow->dl();
-    if(dlib) {
-        typedef double (*webkit_web_view_get_zoom_level_func)(void*);
-        webkit_web_view_get_zoom_level_func webkit_web_view_get_zoom_level = 
-            (webkit_web_view_get_zoom_level_func)(dlsym(dlib, "webkit_web_view_get_zoom_level"));
-        if(webkit_web_view_get_zoom_level) {
-            zoomFactor = webkit_web_view_get_zoom_level(nativeWindow->wv());
-        }
-    }
-    
-    #elif defined(__APPLE__)
-    // Get magnification from WKWebView
-    zoomFactor = ((double (*)(id, SEL))objc_msgSend)(
-        (id)nativeWindow->wv(),
-        "magnification"_sel
-    );
-    
-    #elif defined(_WIN32)
-    // Get zoom factor from WebView2
-    ICoreWebView2Controller *controller = (ICoreWebView2Controller*)nativeWindow->wv();
-    if(controller) {
-        controller->get_ZoomFactor(&zoomFactor);
-    }
-    #endif
-    
+    double zoomFactor = nativeWindow->get_zoom();
     windowProps.zoom = zoomFactor;
     return zoomFactor;
 }

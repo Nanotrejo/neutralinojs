@@ -394,6 +394,31 @@ public:
     webkit_web_view_load_uri((WebKitWebView*)(m_webview), url.c_str());
   }
 
+  void set_zoom(double zoom) {
+    // Load the webkit function dynamically
+    if(dlib) {
+      typedef void (*webkit_web_view_set_zoom_level_func)(void*, double);
+      webkit_web_view_set_zoom_level_func webkit_web_view_set_zoom_level = 
+          (webkit_web_view_set_zoom_level_func)(dlsym(dlib, "webkit_web_view_set_zoom_level"));
+      if(webkit_web_view_set_zoom_level) {
+        webkit_web_view_set_zoom_level(m_webview, zoom);
+      }
+    }
+  }
+
+  double get_zoom() {
+    double zoom = 1.0;
+    if(dlib) {
+      typedef double (*webkit_web_view_get_zoom_level_func)(void*);
+      webkit_web_view_get_zoom_level_func webkit_web_view_get_zoom_level = 
+          (webkit_web_view_get_zoom_level_func)(dlsym(dlib, "webkit_web_view_get_zoom_level"));
+      if(webkit_web_view_get_zoom_level) {
+        zoom = webkit_web_view_get_zoom_level(m_webview);
+      }
+    }
+    return zoom;
+  }
+
 protected:
   int initCode = 0;
 
@@ -732,6 +757,21 @@ public:
                                            "requestWithURL:"_sel, nsurl));
   }
 
+  void set_zoom(double zoom) {
+    ((void (*)(id, SEL, double))objc_msgSend)(
+        m_webview,
+        "setMagnification:"_sel,
+        zoom
+    );
+  }
+
+  double get_zoom() {
+    return ((double (*)(id, SEL))objc_msgSend)(
+        m_webview,
+        "magnification"_sel
+    );
+  }
+
 
 protected:
   int initCode = 0;
@@ -882,6 +922,20 @@ public:
     auto wurl = to_lpwstr(url);
     m_webview->Navigate(wurl);
     delete[] wurl;
+  }
+
+  void set_zoom(double zoom) {
+    if (m_controller != nullptr) {
+      m_controller->put_ZoomFactor(zoom);
+    }
+  }
+
+  double get_zoom() {
+    double zoom = 1.0;
+    if (m_controller != nullptr) {
+      m_controller->get_ZoomFactor(&zoom);
+    }
+    return zoom;
   }
 
   void *wv() {
