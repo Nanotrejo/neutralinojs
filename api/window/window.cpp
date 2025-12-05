@@ -1049,8 +1049,12 @@ void setSkipTaskbar(bool skip) {
 }
 
 void setZoom(double zoomFactor) {
+    // Validate zoom factor range to match schema constraints
     if(zoomFactor <= 0.0) {
         zoomFactor = 1.0;
+    }
+    if(zoomFactor > 5.0) {
+        zoomFactor = 5.0;
     }
     windowProps.zoom = zoomFactor;
     
@@ -1067,6 +1071,7 @@ void setZoom(double zoomFactor) {
 }
 
 double getZoom() {
+    // Gets the current zoom level and updates windowProps.zoom cache
     double zoomFactor = nativeWindow->get_zoom();
     windowProps.zoom = zoomFactor;
     return zoomFactor;

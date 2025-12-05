@@ -389,6 +389,8 @@ public:
       if(webkit_web_view_set_zoom_level) {
         webkit_web_view_set_zoom_level(m_webview, zoom);
       }
+      // If function not found, zoom setting will fail silently
+      // This is acceptable as it maintains compatibility with older WebKit versions
     }
   }
 
@@ -401,6 +403,7 @@ public:
       if(webkit_web_view_get_zoom_level) {
         zoom = webkit_web_view_get_zoom_level(m_webview);
       }
+      // If function not found, returns default zoom of 1.0
     }
     return zoom;
   }
