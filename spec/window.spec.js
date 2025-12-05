@@ -392,14 +392,14 @@ describe('window.spec: window namespace tests', () => {
             assert.equal(runner.getOutput(), 'done');
         });
 
-        it('sets zoom to default when invalid value is provided', async () => {
+        it('sets zoom to minimum when invalid value is provided', async () => {
             runner.run(`
                 await Neutralino.window.setZoom(0);
                 let zoom = await Neutralino.window.getZoom();
                 await __close(JSON.stringify(zoom));
             `);
-            // Should default to 1.0 when 0 or negative is provided
-            assert.ok(parseFloat(runner.getOutput()) === 1.0);
+            // Should clamp to minimum 0.1 when 0 or negative is provided
+            assert.ok(parseFloat(runner.getOutput()) === 0.1);
         });
     });
 

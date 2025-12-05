@@ -63,6 +63,10 @@ using namespace Gdiplus;
 
 namespace window {
 
+// Zoom level constraints matching schema
+constexpr double ZOOM_MIN = 0.1;
+constexpr double ZOOM_MAX = 5.0;
+
 webview::webview *nativeWindow;
 #if defined(__linux__) || defined(__FreeBSD__)
 bool isGtkWindowFullScreen = false;
@@ -1052,12 +1056,12 @@ void setSkipTaskbar(bool skip) {
 }
 
 void setZoom(double zoomFactor) {
-    // Validate zoom factor range to match schema constraints (0.1 - 5.0)
-    if(zoomFactor < 0.1) {
-        zoomFactor = 0.1;  // Match schema minimum
+    // Validate zoom factor range to match schema constraints
+    if(zoomFactor < ZOOM_MIN) {
+        zoomFactor = ZOOM_MIN;
     }
-    if(zoomFactor > 5.0) {
-        zoomFactor = 5.0;  // Match schema maximum
+    if(zoomFactor > ZOOM_MAX) {
+        zoomFactor = ZOOM_MAX;
     }
     windowProps.zoom = zoomFactor;
     
