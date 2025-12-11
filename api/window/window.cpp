@@ -1065,16 +1065,11 @@ void setZoom(double zoomFactor) {
     }
     windowProps.zoom = zoomFactor;
     
-    #if defined(__linux__) || defined(__FreeBSD__)
-    // Use webkit_web_view_set_zoom_level for GTK/WebKit
+    // Dispatch zoom changes on the main UI thread for all platforms
+    // This ensures thread-safety when called from API handlers
     nativeWindow->dispatch([zoomFactor]() {
         nativeWindow->set_zoom(zoomFactor);
     });
-    
-    #else
-    // For macOS and Windows, can call directly
-    nativeWindow->set_zoom(zoomFactor);
-    #endif
 }
 
 double getZoom() {
