@@ -1322,17 +1322,6 @@ public:
   double get_zoom() {
     return browser_engine::get_zoom();
   }
-
-#if defined(WEBVIEW_EDGE)
-  // Métodos multiplataforma para zoom en Windows
-  void set_zoom(double zoom) {
-    if (m_browser) m_browser->set_zoom(zoom);
-  }
-  double get_zoom() {
-    if (m_browser) return m_browser->get_zoom();
-    return 1.0;
-  }
-#endif
 };
 } // namespace webview
 
