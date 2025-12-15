@@ -884,20 +884,6 @@ public:
     }
     MSG msg = {};
 
-    void set_zoom(double zoom) {
-    if (m_controller != nullptr) {
-      m_controller->put_ZoomFactor(zoom);
-      }
-    }
-
-    double get_zoom() {
-    double zoom = 1.0;
-    if (m_controller != nullptr) {
-      m_controller->get_ZoomFactor(&zoom);
-    }
-      return zoom;
-    }
-
     while (flag.test_and_set() && GetMessage(&msg, NULL, 0, 0)) {
       TranslateMessage(&msg);
       DispatchMessage(&msg);
@@ -1033,6 +1019,7 @@ private:
 };
 
 class win32_edge_engine {
+
 public:
   win32_edge_engine(bool debug, bool openInspector, void *window, bool transparent, const std::string& args) {
     if(args != "") {
@@ -1214,6 +1201,15 @@ public:
     }
   }
   void *window() { return (void *)m_window; }
+    // Métodos de zoom multiplataforma para Windows
+  void set_zoom(double zoom) {
+    if (m_browser) m_browser->set_zoom(zoom);
+  }
+
+  double get_zoom() {
+    if (m_browser) return m_browser->get_zoom();
+    return 1.0;
+  }
   void *wv() { return (void *)m_browser->wv(); }
   void terminate(int exitCode = 0) {
 
