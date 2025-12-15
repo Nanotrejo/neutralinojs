@@ -1340,6 +1340,14 @@ public:
     return initCode;
   }
 
+  void set_zoom(double zoom) {
+    browser_engine::set_zoom(zoom);
+  }
+
+  double get_zoom() {
+    return browser_engine::get_zoom();
+  }
+
 #if defined(WEBVIEW_EDGE)
   // Métodos multiplataforma para zoom en Windows
   void set_zoom(double zoom) {
