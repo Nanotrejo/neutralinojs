@@ -759,11 +759,18 @@ public:
   }
 
   void set_zoom(double zoom) {
+    // Aplica el zoom nativo
     ((void (*)(id, SEL, double))objc_msgSend)(
-        m_webview,
-        "setMagnification:"_sel,
-        zoom
+      m_webview,
+      "setMagnification:"_sel,
+      zoom
     );
+    // Ajusta el frame del WKWebView para que ocupe el 100% de la ventana
+    CGRect windowFrame = ((CGRect (*)(id, SEL))objc_msgSend)(m_window, sel_registerName("frame"));
+    ((void (*)(id, SEL, CGRect))objc_msgSend)(m_webview, sel_registerName("setFrame:"), windowFrame);
+    // Forzar layout
+    ((void (*)(id, SEL))objc_msgSend)(m_webview, sel_registerName("setNeedsLayout:"), 1);
+    ((void (*)(id, SEL))objc_msgSend)(m_webview, sel_registerName("layoutIfNeeded"));
   }
 
   double get_zoom() {
