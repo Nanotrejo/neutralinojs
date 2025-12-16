@@ -759,18 +759,23 @@ public:
   }
 
   void set_zoom(double zoom) {
-    // Aplica el zoom nativo
-    ((void (*)(id, SEL, double))objc_msgSend)(
-      m_webview,
-      "setMagnification:"_sel,
-      zoom
-    );
-    // Ajusta el frame del WKWebView para que ocupe el 100% de la ventana
-    CGRect windowFrame = ((CGRect (*)(id, SEL))objc_msgSend)(m_window, sel_registerName("frame"));
-    ((void (*)(id, SEL, CGRect))objc_msgSend)(m_webview, sel_registerName("setFrame:"), windowFrame);
-    // Forzar layout
-    ((void (*)(id, SEL))objc_msgSend)(m_webview, sel_registerName("setNeedsLayout:"));
-    ((void (*)(id, SEL))objc_msgSend)(m_webview, sel_registerName("layoutIfNeeded"));
+    // Usar setPageZoom: (macOS 11+) para zoom nativo de layout y viewport
+    SEL pageZoomSel = sel_registerName("setPageZoom:");
+    Class wvClass = object_getClass(m_webview);
+    if(class_respondsToSelector(wvClass, pageZoomSel)) {
+      ((void (*)(id, SEL, double))objc_msgSend)(
+        m_webview,
+        pageZoomSel,
+        zoom
+      );
+    } else {
+      // Fallback para versiones antiguas (no recomendado)
+      ((void (*)(id, SEL, double))objc_msgSend)(
+        m_webview,
+        sel_registerName("setMagnification:"),
+        zoom
+      );
+    }
   }
 
   double get_zoom() {
