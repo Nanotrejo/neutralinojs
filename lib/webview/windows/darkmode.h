@@ -99,21 +99,22 @@ HRESULT SetWindowCornerStyle(HWND hWnd) {
 
 // Applies modern visual enhancements to the window
 HRESULT ApplyModernWindowStyle(HWND hWnd) {
-    HRESULT result = S_OK;
+    HRESULT darkModeResult = S_OK;
+    HRESULT cornerResult = S_OK;
     
-    // Apply dark/light mode
+    // Apply dark/light mode based on system preference
     if (IsDarkModePreferred() && !IsHighContrast()) {
-        result = TrySetWindowTheme(hWnd, true);
+        darkModeResult = TrySetWindowTheme(hWnd, true);
+    } else if (!IsHighContrast()) {
+        // Apply light mode explicitly
+        darkModeResult = TrySetWindowTheme(hWnd, false);
     }
     
     // Apply rounded corners on Windows 11
-    HRESULT cornerResult = SetWindowCornerStyle(hWnd);
-    // Continue even if corner styling fails, as it's not critical
-    if (SUCCEEDED(result)) {
-        result = cornerResult;
-    }
+    cornerResult = SetWindowCornerStyle(hWnd);
     
-    return result;
+    // Return the first error encountered, or S_OK if both succeeded
+    return FAILED(darkModeResult) ? darkModeResult : cornerResult;
 }
 
 // Sets dark mode of title bar according to system theme.
