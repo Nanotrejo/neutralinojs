@@ -208,6 +208,13 @@
             "webviewArgs": {
                 "type": "string",
                 "description": "Additional command-line arguments for the WebView2 process."
+            },
+            "zoom": {
+                "type": "number",
+                "description": "Sets the initial zoom level for the window. Values greater than 1.0 zoom in, values less than 1.0 zoom out. Default is 1.0 (100%).",
+                "default": 1.0,
+                "minimum": 0.1,
+                "maximum": 5.0
             }
           }
         },

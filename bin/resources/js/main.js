@@ -30,4 +30,19 @@ Neutralino.events.on("eventFromExtension", (evt) => {
     console.log(`INFO: Test extension said: ${evt.detail}`);
 });
 
+async function zoom(value) {
+    const zoom = Number(value) / 100;
+    console.log(`Setting zoom to ${zoom}...`);
+    Neutralino.window.setZoom(zoom ).then((result) => {
+        console.log(`Zoom set to ${value}%. Result: ${JSON.stringify(result, null, 2)}`);
+    }, (err) => {
+        console.log(`Failed to set zoom: ${JSON.stringify(err, null, 2)}`);
+    });
+}
+
+async function getZoom() {
+    const zoom = await Neutralino.window.getZoom();
+    console.log(`Current zoom: ${JSON.stringify(zoom, null, 2)}`);
+}
+
 showInfo();
