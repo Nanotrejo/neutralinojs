@@ -1,3 +1,11 @@
+#ifdef __APPLE__
+// Forward declaration para evitar error de tipo incompleto
+namespace webview {
+  class cocoa_wkwebview_engine;
+}
+// Declaración de keyDownHandler para zoom nativo (implementación al final del archivo)
+extern "C" BOOL keyDownHandler(id self, SEL _cmd, id event);
+#endif
 /*
  * MIT License
  *
@@ -308,6 +316,36 @@ public:
       webkit_web_view_set_background_color((WebKitWebView*)(m_webview), &color);
     }
 
+    // Conectar eventos de teclado para zoom nativo
+    g_object_set_data(G_OBJECT(m_window), "webview_engine", this);
+    g_signal_connect(G_OBJECT(m_window), "key-press-event",
+                     G_CALLBACK(+[](GtkWidget *widget, GdkEventKey *event, gpointer user_data) -> gboolean {
+                       bool isCtrl = (event->state & GDK_CONTROL_MASK);
+                       bool isShift = (event->state & GDK_SHIFT_MASK);
+                       guint keyval = event->keyval;
+                       
+                       // Ctrl+Plus, Ctrl+Minus, Ctrl+0
+                       if(isCtrl && (keyval == GDK_KEY_plus || keyval == GDK_KEY_equal || 
+                                     keyval == GDK_KEY_minus || keyval == GDK_KEY_0)) {
+                         gtk_webkit_engine *eng = (gtk_webkit_engine *)g_object_get_data(G_OBJECT(widget), "webview_engine");
+                         if(eng) {
+                           double zoom = eng->get_zoom();
+                           if(keyval == GDK_KEY_0) {
+                             zoom = 1.0;
+                           } else if(keyval == GDK_KEY_minus) {
+                             zoom -= 0.1;
+                           } else if(keyval == GDK_KEY_plus || keyval == GDK_KEY_equal) {
+                             zoom += 0.1;
+                           }
+                           if(zoom < 0.2) zoom = 0.2;
+                           if(zoom > 5.0) zoom = 5.0;
+                           eng->set_zoom(zoom);
+                           return TRUE;
+                         }
+                       }
+                       return FALSE;
+                     }), nullptr);
+
     gtk_widget_show_all(m_window);
   }
   void *window() { return (void *)m_window; }
@@ -571,17 +609,25 @@ public:
     objc_registerClassPair(wcls);
 
     auto wdelegate = ((id(*)(id, SEL))objc_msgSend)((id)wcls, "new"_sel);
-    objc_setAssociatedObject(delegate, "webview", (id)this,
+    objc_setAssociatedObject(wdelegate, "webview", (id)this,
                              OBJC_ASSOCIATION_ASSIGN);
     ((void (*)(id, SEL, id))objc_msgSend)(m_window, sel_registerName("setDelegate:"),
                                           wdelegate);
+
+    // Custom WKWebView subclass para capturar eventos de teclado
+    auto wvCls = objc_allocateClassPair((Class)"WKWebView"_cls, "CustomWKWebView", 0);
+    class_addMethod(wvCls, sel_registerName("keyDown:"), (IMP)keyDownHandler, "v@:@");
+    objc_registerClassPair(wvCls);
 
     // Webview
     auto config =
         ((id(*)(id, SEL))objc_msgSend)("WKWebViewConfiguration"_cls, "new"_sel);
     m_manager =
         ((id(*)(id, SEL))objc_msgSend)(config, "userContentController"_sel);
-    m_webview = ((id(*)(id, SEL))objc_msgSend)("WKWebView"_cls, "alloc"_sel);
+    m_webview = ((id(*)(id, SEL))objc_msgSend)((id)wvCls, "alloc"_sel);
+    
+    // Asociar el engine con el webview para keyDownHandler
+    objc_setAssociatedObject(m_webview, "webview", (id)this, OBJC_ASSOCIATION_ASSIGN);
 
     if (debug) {
       // Equivalent Obj-C:
@@ -759,30 +805,21 @@ public:
   }
 
   void set_zoom(double zoom) {
-    // Usar setPageZoom: (macOS 11+) para zoom nativo de layout y viewport
-    SEL pageZoomSel = sel_registerName("setPageZoom:");
-    Class wvClass = object_getClass(m_webview);
-    if(class_respondsToSelector(wvClass, pageZoomSel)) {
-      ((void (*)(id, SEL, double))objc_msgSend)(
-        m_webview,
-        pageZoomSel,
-        zoom
-      );
-    } else {
-      // Fallback para versiones antiguas (no recomendado)
-      ((void (*)(id, SEL, double))objc_msgSend)(
-        m_webview,
-        sel_registerName("setMagnification:"),
-        zoom
-      );
-    }
+    // Usar pageZoom (macOS 11+) para zoom nativo consistente
+    ((void (*)(id, SEL, double))objc_msgSend)(
+      m_webview,
+      sel_registerName("setPageZoom:"),
+      zoom
+    );
   }
 
   double get_zoom() {
-    return ((double (*)(id, SEL))objc_msgSend)(
+    // Usar pageZoom para obtener el zoom actual
+    double zoom = ((double (*)(id, SEL))objc_msgSend)(
         m_webview,
-        "magnification"_sel
+        sel_registerName("pageZoom")
     );
+    return zoom;
   }
 
 
@@ -799,6 +836,32 @@ private:
 using browser_engine = cocoa_wkwebview_engine;
 
 } // namespace webview
+
+// Implementación de keyDownHandler para zoom nativo (después de la definición completa de cocoa_wkwebview_engine)
+extern "C" BOOL keyDownHandler(id self, SEL _cmd, id event) {
+  unsigned long flags = ((unsigned long (*)(id, SEL))objc_msgSend)(event, sel_registerName("modifierFlags"));
+  id charsObj = ((id (*)(id, SEL))objc_msgSend)(event, sel_registerName("charactersIgnoringModifiers"));
+  const char *chars = ((const char *(*)(id, SEL))objc_msgSend)(charsObj, sel_registerName("UTF8String"));
+  char key = (chars && chars[0]) ? chars[0] : 0;
+  bool isCmd = (flags & (1UL << 20));
+  bool isCtrl = (flags & (1UL << 18));
+  
+  if((isCmd || isCtrl) && (key == '-' || key == '=' || key == '+')) {
+    void *engine = objc_getAssociatedObject(self, "webview");
+    if(engine) {
+      webview::cocoa_wkwebview_engine *eng = (webview::cocoa_wkwebview_engine *)engine;
+      double zoom = eng->get_zoom();
+      if(key == '-') zoom -= 0.1;
+      else if(key == '=' || key == '+') zoom += 0.1;
+      if(zoom < 0.2) zoom = 0.2;
+      if(zoom > 5.0) zoom = 5.0;
+      eng->set_zoom(zoom);
+      return 1;
+    }
+  }
+  struct objc_super superInfo = { self, class_getSuperclass(object_getClass(self)) };
+  return ((BOOL (*)(struct objc_super *, SEL, id))objc_msgSendSuper)(&superInfo, _cmd, event);
+}
 
 #elif defined(WEBVIEW_EDGE)
 
@@ -1066,6 +1129,27 @@ public:
                 windowStateChange(WEBVIEW_WINDOW_RESTORED);
               else if(wp == SIZE_MAXIMIZED) 
                 windowStateChange(WEBVIEW_WINDOW_MAXIMIZE);
+              break;
+            case WM_KEYDOWN:
+              // Capturar Ctrl+Plus, Ctrl+Minus, Ctrl+0 para zoom
+              if(GetKeyState(VK_CONTROL) & 0x8000) {
+                if(wp == VK_OEM_PLUS || wp == VK_ADD) {
+                  double zoom = w->m_browser->get_zoom();
+                  zoom += 0.1;
+                  if(zoom > 5.0) zoom = 5.0;
+                  w->m_browser->set_zoom(zoom);
+                  return 0;
+                } else if(wp == VK_OEM_MINUS || wp == VK_SUBTRACT) {
+                  double zoom = w->m_browser->get_zoom();
+                  zoom -= 0.1;
+                  if(zoom < 0.2) zoom = 0.2;
+                  w->m_browser->set_zoom(zoom);
+                  return 0;
+                } else if(wp == '0' || wp == VK_NUMPAD0) {
+                  w->m_browser->set_zoom(1.0);
+                  return 0;
+                }
+              }
               break;
             case WM_CLOSE:
               if(windowStateChange)
