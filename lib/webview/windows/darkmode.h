@@ -79,9 +79,40 @@ HRESULT TrySetWindowTheme(HWND hWnd, bool dark) {
     return S_OK;
 }
 
+// Sets rounded corners for Windows 11 windows
+// DWMWA_WINDOW_CORNER_PREFERENCE = 33
+HRESULT SetWindowCornerStyle(HWND hWnd) {
+    DWORD buildNumber = GetBuildNumber();
+    // Only apply rounded corners on Windows 11 (build 22000+)
+    if (buildNumber >= 22000) {
+        // DWM_WINDOW_CORNER_PREFERENCE values:
+        // 0 = Default (system decides)
+        // 1 = No rounding
+        // 2 = Round corners
+        // 3 = Round small corners
+        const DWORD cornerPreference = 2; // Round corners
+        HRESULT result = DwmSetWindowAttribute(hWnd, 33, &cornerPreference, sizeof(cornerPreference));
+        return result;
+    }
+    return S_OK;
+}
+
+// Applies modern visual enhancements to the window
+HRESULT ApplyModernWindowStyle(HWND hWnd) {
+    HRESULT result = S_OK;
+    
+    // Apply dark/light mode
+    if (IsDarkModePreferred() && !IsHighContrast()) {
+        result = TrySetWindowTheme(hWnd, true);
+    }
+    
+    // Apply rounded corners on Windows 11
+    SetWindowCornerStyle(hWnd);
+    
+    return result;
+}
+
 // Sets dark mode of title bar according to system theme.
 HRESULT TrySetWindowTheme(HWND hWnd) {
-    if (IsDarkModePreferred() && !IsHighContrast())
-        return TrySetWindowTheme(hWnd, true);
-    return S_OK;
+    return ApplyModernWindowStyle(hWnd);
 }
