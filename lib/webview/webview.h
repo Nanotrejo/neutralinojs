@@ -769,7 +769,7 @@ public:
     CGRect windowFrame = ((CGRect (*)(id, SEL))objc_msgSend)(m_window, sel_registerName("frame"));
     ((void (*)(id, SEL, CGRect))objc_msgSend)(m_webview, sel_registerName("setFrame:"), windowFrame);
     // Forzar layout
-    ((void (*)(id, SEL))objc_msgSend)(m_webview, sel_registerName("setNeedsLayout:"), 1);
+    ((void (*)(id, SEL))objc_msgSend)(m_webview, sel_registerName("setNeedsLayout:"));
     ((void (*)(id, SEL))objc_msgSend)(m_webview, sel_registerName("layoutIfNeeded"));
   }
 
