@@ -171,7 +171,6 @@ public:
       // This gives a nice header bar with integrated title and controls
       GtkWidget *header_bar = gtk_header_bar_new();
       gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(header_bar), TRUE);
-      gtk_header_bar_set_title(GTK_HEADER_BAR(header_bar), "Neutralinojs");
       gtk_header_bar_set_has_subtitle(GTK_HEADER_BAR(header_bar), FALSE);
       gtk_window_set_titlebar(GTK_WINDOW(m_window), header_bar);
     }
@@ -611,15 +610,13 @@ public:
                                           m_webview);
     
     // Enable modern macOS appearance features for better looking title bar
-    // Set titlebar appearance to unified with content
-    ((void (*)(id, SEL, int))objc_msgSend)(m_window, "setTitlebarAppearsTransparent:"_sel, 1);
+    // Set titlebar appearance to unified with content for a more integrated look
+    ((void (*)(id, SEL, BOOL))objc_msgSend)(m_window, "setTitlebarAppearsTransparent:"_sel, 1);
     
-    // Hide title text for a cleaner look (optional, can be configured)
-    ((void (*)(id, SEL, int))objc_msgSend)(m_window, "setTitleVisibility:"_sel, 1); // NSWindowTitleHidden = 1
-    
-    // Create a toolbar to get the unified title bar appearance
+    // Create a toolbar to get the unified title bar appearance (macOS Big Sur+ style)
+    // This gives the window a modern, integrated title bar that blends with the content
     id toolbar = ((id(*)(id, SEL))objc_msgSend)("NSToolbar"_cls, "alloc"_sel);
-    toolbar = ((id(*)(id, SEL, id))objc_msgSend)(toolbar, "initWithIdentifier:"_sel, "MainToolbar"_str);
+    toolbar = ((id(*)(id, SEL, id))objc_msgSend)(toolbar, "initWithIdentifier:"_sel, "com.neutralinojs.mainToolbar"_str);
     ((void (*)(id, SEL, id))objc_msgSend)(m_window, "setToolbar:"_sel, toolbar);
     
     ((void (*)(id, SEL, id))objc_msgSend)(m_window, "makeKeyAndOrderFront:"_sel,

@@ -107,7 +107,11 @@ HRESULT ApplyModernWindowStyle(HWND hWnd) {
     }
     
     // Apply rounded corners on Windows 11
-    SetWindowCornerStyle(hWnd);
+    HRESULT cornerResult = SetWindowCornerStyle(hWnd);
+    // Continue even if corner styling fails, as it's not critical
+    if (SUCCEEDED(result)) {
+        result = cornerResult;
+    }
     
     return result;
 }
