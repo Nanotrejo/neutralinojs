@@ -168,6 +168,13 @@ public:
     m_window = static_cast<GtkWidget *>(window);
     if (m_window == nullptr) {
       m_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+      
+      // Enable client-side decorations for modern appearance
+      // This gives a nice header bar with integrated title and controls
+      GtkWidget *header_bar = gtk_header_bar_new();
+      gtk_header_bar_set_show_close_button(GTK_HEADER_BAR(header_bar), TRUE);
+      gtk_header_bar_set_has_subtitle(GTK_HEADER_BAR(header_bar), FALSE);
+      gtk_window_set_titlebar(GTK_WINDOW(m_window), header_bar);
     }
 
     if(transparent) {
@@ -335,7 +342,12 @@ public:
 
   void set_title(const std::string title) {
     gtk_window_set_title(GTK_WINDOW(m_window), title.c_str());
-
+    
+    // Also update header bar title if it exists
+    GtkWidget *titlebar = gtk_window_get_titlebar(GTK_WINDOW(m_window));
+    if (titlebar && GTK_IS_HEADER_BAR(titlebar)) {
+      gtk_header_bar_set_title(GTK_HEADER_BAR(titlebar), title.c_str());
+    }
   }
 
   void extend_user_agent(const std::string customAgent) {
@@ -598,6 +610,17 @@ public:
 
     ((void (*)(id, SEL, id))objc_msgSend)(m_window, "setContentView:"_sel,
                                           m_webview);
+    
+    // Enable modern macOS appearance features for better looking title bar
+    // Set titlebar appearance to unified with content for a more integrated look
+    ((void (*)(id, SEL, BOOL))objc_msgSend)(m_window, "setTitlebarAppearsTransparent:"_sel, 1);
+    
+    // Create a toolbar to get the unified title bar appearance (macOS Big Sur+ style)
+    // This gives the window a modern, integrated title bar that blends with the content
+    id toolbar = ((id(*)(id, SEL))objc_msgSend)("NSToolbar"_cls, "alloc"_sel);
+    toolbar = ((id(*)(id, SEL, id))objc_msgSend)(toolbar, "initWithIdentifier:"_sel, "com.neutralinojs.mainToolbar"_str);
+    ((void (*)(id, SEL, id))objc_msgSend)(m_window, "setToolbar:"_sel, toolbar);
+    
     ((void (*)(id, SEL, id))objc_msgSend)(m_window, "makeKeyAndOrderFront:"_sel,
                                           nullptr);
   }
