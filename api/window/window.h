@@ -70,6 +70,7 @@ struct WindowOptions {
     string injectScript = "";
     int x = 0;
     int y = 0;
+    double zoom = 1.0;
 };
 
 struct WindowMenuItem {
@@ -123,6 +124,8 @@ void setSkipTaskbar(bool skip);
 bool snapshot(const string &filename);
 void setMainMenu(const json &menu);
 bool init(const json &windowOptions);
+void setZoom(double zoomFactor);
+double getZoom();  // Gets current zoom level and updates windowProps.zoom cache
 
 void _close(int exitCode);
 
@@ -157,6 +160,8 @@ json snapshot(const json &input);
 json setMainMenu(const json &input);
 json beginDrag(const json& input);
 json print(const json &input);
+json setZoom(const json &input);
+json getZoom(const json &input);
 
 } // namespace controllers
 

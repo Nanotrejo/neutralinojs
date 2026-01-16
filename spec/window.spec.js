@@ -383,4 +383,47 @@ describe('window.spec: window namespace tests', () => {
         });
     });
 
+    describe('window.setZoom', () => {
+        it('sets the zoom level to a specific value', async () => {
+            runner.run(`
+                await Neutralino.window.setZoom(1.5);
+                await __close('done');
+            `);
+            assert.equal(runner.getOutput(), 'done');
+        });
+
+        it('sets zoom to minimum when invalid value is provided', async () => {
+            runner.run(`
+                await Neutralino.window.setZoom(0);
+                let zoom = await Neutralino.window.getZoom();
+                await __close(JSON.stringify(zoom));
+            `);
+            // Should clamp to minimum 0.1 when 0 or negative is provided
+            assert.ok(parseFloat(runner.getOutput()) === 0.1);
+        });
+    });
+
+    describe('window.getZoom', () => {
+        it('returns the current zoom level', async () => {
+            runner.run(`
+                await Neutralino.window.setZoom(1.25);
+                let zoom = await Neutralino.window.getZoom();
+                await __close(JSON.stringify(zoom));
+            `);
+            let zoomValue = parseFloat(runner.getOutput());
+            assert.ok(typeof zoomValue === 'number');
+            assert.ok(zoomValue === 1.25);
+        });
+
+        it('returns default zoom level of 1.0 initially', async () => {
+            runner.run(`
+                let zoom = await Neutralino.window.getZoom();
+                await __close(JSON.stringify(zoom));
+            `);
+            let zoomValue = parseFloat(runner.getOutput());
+            assert.ok(typeof zoomValue === 'number');
+            assert.ok(zoomValue === 1.0);
+        });
+    });
+
 });

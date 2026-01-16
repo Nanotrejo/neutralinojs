@@ -63,6 +63,10 @@ using namespace Gdiplus;
 
 namespace window {
 
+// Zoom level constraints matching schema
+constexpr double ZOOM_MIN = 0.1;
+constexpr double ZOOM_MAX = 5.0;
+
 webview::webview *nativeWindow;
 #if defined(__linux__) || defined(__FreeBSD__)
 bool isGtkWindowFullScreen = false;
@@ -248,6 +252,7 @@ void __saveWindowProps() {
     options["x"] = pos.first;
     options["y"] = pos.second;
     options["maximize"] = window::isMaximized();
+    options["zoom"] = window::getZoom();
     
     #if defined(_WIN32)
     if(IsZoomed(windowHandle)) {
@@ -278,6 +283,10 @@ bool __loadSavedWindowProps() {
         windowProps.maximize = options["maximize"].get<bool>();
         windowProps.sizeOptions.width = options["width"].get<int>();
         windowProps.sizeOptions.height = options["height"].get<int>();
+        
+        if(helpers::hasField(options, "zoom")) {
+            windowProps.zoom = options["zoom"].get<double>();
+        }
 
         #if defined(_WIN32)
         WINDOWPLACEMENT wp = {sizeof(WINDOWPLACEMENT)};
@@ -651,6 +660,9 @@ bool __createWindow() {
 
     if(windowProps.skipTaskbar)
         window::setSkipTaskbar(true);
+    
+    if(windowProps.zoom != 1.0)
+        window::setZoom(windowProps.zoom);
 
     nativeWindow->navigate(windowProps.url);
 
@@ -1043,6 +1055,30 @@ void setSkipTaskbar(bool skip) {
     #endif
 }
 
+void setZoom(double zoomFactor) {
+    // Validate zoom factor range to match schema constraints
+    if(zoomFactor < ZOOM_MIN) {
+        zoomFactor = ZOOM_MIN;
+    }
+    if(zoomFactor > ZOOM_MAX) {
+        zoomFactor = ZOOM_MAX;
+    }
+    windowProps.zoom = zoomFactor;
+    
+    // Dispatch zoom changes on the main UI thread for all platforms
+    // This ensures thread-safety when called from API handlers
+    nativeWindow->dispatch([zoomFactor]() {
+        nativeWindow->set_zoom(zoomFactor);
+    });
+}
+
+double getZoom() {
+    // Gets the current zoom level and updates windowProps.zoom cache
+    double zoomFactor = nativeWindow->get_zoom();
+    windowProps.zoom = zoomFactor;
+    return zoomFactor;
+}
+
 bool snapshot(const string &filename) {
     #if defined(__linux__) || defined(__FreeBSD__)
     int width, height, x, y;
@@ -1241,6 +1277,9 @@ bool init(const json &windowOptions) {
 
     if(helpers::hasField(windowOptions, "skipTaskbar"))
         windowProps.skipTaskbar = windowOptions["skipTaskbar"].get<bool>();
+    
+    if(helpers::hasField(windowOptions, "zoom"))
+        windowProps.zoom = windowOptions["zoom"].get<double>();
 
     if(!__createWindow()) {
         return false;
@@ -1552,6 +1591,23 @@ json print(const json &input) {
     return output;
 }
 
+json setZoom(const json &input) {
+    json output;
+    double zoomFactor = 1.0;
+    if(helpers::hasField(input, "zoom")) {
+        zoomFactor = input["zoom"].get<double>();
+    }
+    window::setZoom(zoomFactor);
+    output["success"] = true;
+    return output;
+}
+
+json getZoom(const json &input) {
+    json output;
+    output["returnValue"] = window::getZoom();
+    output["success"] = true;
+    return output;
+}
 
 } // namespace controllers
 
