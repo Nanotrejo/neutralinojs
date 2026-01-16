@@ -9,6 +9,24 @@ rename `Unreleased` topic with the new version tag. Finally, create a new `Unrel
 ### Core: events
 - New window events: `windowMinimize`, `windowRestore`, `windowMaximize`, `windowFullScreenEnter`, and `windowFullScreenExit`
 
+### API: window
+- Add `window.setBorderless(bool)` to toggle borderless mode while the Neutralinojs app is running.
+
+### Configuration
+- Add `modes.chrome.browserBinary` option to set custom browser binary path under the chrome mode. If this field is specified, the framework will try to launch Chrome from there. If it fails, the framework will initiate the Chrome binary search as usual:
+```js
+// cross-platform
+"browserBinary": "/path/to/chrome/bin"
+
+// cross-platform (with path variables)
+"browserBinary": "${NL_DATAHOMEPATH}/chrome/bin"
+
+// platform-specific path
+"browserBinaryLinux": "/usr/bin/google-chrome",
+"browserBinaryDarwin": "/Applications/Google Chrome.app",
+"browserBinaryWindows": "C:\\Programs\\Google Chrome\\chrome.exe"
+``` 
+
 ## v6.4.0
 
 ### API: storage
